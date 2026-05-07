@@ -13,10 +13,7 @@ export default function TeacherLayout() {
         options={{ title: "Classes" }}
       />
 
-      <Stack.Screen
-        name="classes/[id]"
-        options={{ title: "Class Details" }}
-      />
+      
     </Stack>
   );
 }

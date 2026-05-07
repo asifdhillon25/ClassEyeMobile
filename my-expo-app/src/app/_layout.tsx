@@ -1,6 +1,7 @@
 import { Stack, router } from "expo-router";
 import { useEffect } from "react";
 import "../../global.css";
+import { StatusBar } from "expo-status-bar";
 
 export default function RootLayout() {
   useEffect(() => {
@@ -11,5 +12,14 @@ export default function RootLayout() {
     return () => clearTimeout(timeout);
   }, []);
 
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <>
+      <StatusBar style="auto" />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(auth)" />
+        <Stack.Screen name="(protected)" />
+        <Stack.Screen name="index" />
+      </Stack>
+    </>
+  );
 }
