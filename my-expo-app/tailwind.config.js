@@ -6,6 +6,7 @@ module.exports = {
     "./components/**/*.{js,jsx,ts,tsx}",
   ],
   presets: [require("nativewind/preset")],
+ darkMode: "class",// Enable dark mode with class strategy
   theme: {
     extend: {
       fontFamily: {
@@ -29,7 +30,7 @@ module.exports = {
         light: {
           background: '#F8FAFC',        // Clean paper-like background
           surface: '#FFFFFF',           // Whiteboard/card surface
-          surfaceMuted: '#F1F5F9',      // Subtle gray for depth
+          surfaceMuted: '#F1F5F9',      // Subtle gray for depth  
 
           textPrimary: '#1E293B',       // High contrast for readability
           textSecondary: '#64748B',     // Softer for supporting text
@@ -111,6 +112,6 @@ module.exports = {
       },
     },
   },
-  darkMode: 'class',
+  
   plugins: [],
 };

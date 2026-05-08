@@ -44,8 +44,20 @@ export default function Login() {
       setResponse("Login successful!");
       setIsError(false);
 
+      // Redirect based on user role
       setTimeout(() => {
-        router.replace("/(protected)/(teacher)");
+        const role = user.role?.toLowerCase();
+        
+        if (role === "admin") {
+          router.replace("/(protected)/(admin)");
+        } else if (role === "teacher") {
+          router.replace("/(protected)/(teacher)");
+        } else if (role === "student") {
+          router.replace("/(protected)/(student)");
+        } else {
+          // Default to teacher dashboard
+          router.replace("/(protected)/(teacher)");
+        }
       }, 500);
 
     } catch (error) {
