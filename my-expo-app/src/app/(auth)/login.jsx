@@ -49,7 +49,7 @@ export default function Login() {
         const role = user.role?.toLowerCase();
         
         if (role === "admin") {
-          router.replace("/(protected)/(admin)");
+          router.replace("/(protected)/(teacher)");
         } else if (role === "teacher") {
           router.replace("/(protected)/(teacher)");
         } else if (role === "student") {

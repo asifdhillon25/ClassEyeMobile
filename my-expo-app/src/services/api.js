@@ -2,7 +2,7 @@ import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const api = axios.create({
-  baseURL: "http://192.168.1.10:3000/api",
+  baseURL: "http://192.168.1.11:3000/api",
   timeout: 60000, // ⬅️ increase to 60 seconds
   headers: {
     "Content-Type": "application/json",

@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from "react-native";  // ✅ Added ActivityIndicator
+import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from "react-native";
 import { useLocalSearchParams, router, Stack } from "expo-router";
 import { useState, useEffect } from "react";
 import api from "../../../../services/api";
@@ -9,9 +9,16 @@ export default function AttendanceOptions() {
   const [className, setClassName] = useState("");
   const [classDetails, setClassDetails] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [todayStats, setTodayStats] = useState({
+    present: 0,
+    absent: 0,
+    percentage: 0,
+    hasAttendance: false
+  });
 
   useEffect(() => {
     fetchClassDetails();
+    fetchTodayAttendance();
   }, []);
 
   const fetchClassDetails = async () => {
@@ -24,6 +31,26 @@ export default function AttendanceOptions() {
       console.log("Error fetching class details:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchTodayAttendance = async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const res = await api.get(`/attendance/class/${classId}/${today}`);
+      if (res.data.success && res.data.data) {
+        const attendance = res.data.data;
+        const presentCount = attendance.records?.filter(r => r.status === 'present').length || 0;
+        const totalCount = attendance.records?.length || 0;
+        setTodayStats({
+          present: presentCount,
+          absent: totalCount - presentCount,
+          percentage: totalCount > 0 ? Math.round((presentCount / totalCount) * 100) : 0,
+          hasAttendance: attendance._id !== null
+        });
+      }
+    } catch (error) {
+      console.log("Error fetching today's attendance:", error);
     }
   };
 
@@ -81,14 +108,14 @@ export default function AttendanceOptions() {
     <>
       <Stack.Screen 
         options={{ 
-          title: className ? `${className}` : "Attendance",
+          title: className || "Attendance",
           headerShown: true
         }} 
       />
       
       <ScrollView className="flex-1 bg-light-background dark:bg-dark-background">
         {/* Class Info Banner */}
-        <View className="bg-light-primary dark:bg-dark-primary pt-6 pb-8 px-6 rounded-b-3xl shadow-lg">
+        <View className="bg-light-primary dark:bg-dark-primary pt-6 pb-6 px-6 rounded-b-3xl shadow-lg">
           <View className="items-center">
             <View className="w-20 h-20 rounded-full bg-white/20 items-center justify-center mb-3">
               <Ionicons name="school-outline" size={40} color="white" />
@@ -115,8 +142,70 @@ export default function AttendanceOptions() {
           </View>
         </View>
 
+        {/* Today's Summary Card */}
+        <View className="px-5 -mt-6">
+          <View className={`rounded-xl p-4 shadow-card ${todayStats.hasAttendance ? 'bg-light-surface dark:bg-dark-surface' : 'bg-light-warning/10 dark:bg-dark-warning/10 border border-light-warning/20'}`}>
+            <View className="flex-row items-center mb-3">
+              <Ionicons name="today-outline" size={20} color="#0D9488" />
+              <Text className="text-light-textPrimary dark:text-dark-textPrimary font-semibold ml-2">
+                Today's Attendance Summary
+              </Text>
+            </View>
+            {todayStats.hasAttendance ? (
+              <>
+                <View className="flex-row justify-between">
+                  <View className="items-center flex-1">
+                    <Text className="text-2xl font-bold text-light-success dark:text-dark-success">
+                      {todayStats.present}
+                    </Text>
+                    <Text className="text-light-textSecondary dark:text-dark-textSecondary text-xs mt-1">
+                      Present
+                    </Text>
+                  </View>
+                  <View className="w-px bg-light-border dark:border-dark-border" />
+                  <View className="items-center flex-1">
+                    <Text className="text-2xl font-bold text-light-error dark:text-dark-error">
+                      {todayStats.absent}
+                    </Text>
+                    <Text className="text-light-textSecondary dark:text-dark-textSecondary text-xs mt-1">
+                      Absent
+                    </Text>
+                  </View>
+                  <View className="w-px bg-light-border dark:border-dark-border" />
+                  <View className="items-center flex-1">
+                    <Text className="text-2xl font-bold text-light-primary dark:text-dark-primary">
+                      {todayStats.percentage}%
+                    </Text>
+                    <Text className="text-light-textSecondary dark:text-dark-textSecondary text-xs mt-1">
+                      Attendance
+                    </Text>
+                  </View>
+                </View>
+                <TouchableOpacity 
+                  onPress={() => router.push(`/attendance/${classId}/review`)}
+                  className="mt-3 pt-3 border-t border-light-border dark:border-dark-border"
+                >
+                  <Text className="text-light-primary dark:text-dark-primary text-sm text-center font-medium">
+                    Continue Review →
+                  </Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <View className="items-center py-2">
+                <Ionicons name="calendar-outline" size={32} color="#94A3B8" />
+                <Text className="text-light-textSecondary dark:text-dark-textSecondary text-center mt-2">
+                  No attendance marked for today
+                </Text>
+                <Text className="text-light-textMuted dark:text-dark-textMuted text-xs text-center mt-1">
+                  Select a mode below to get started
+                </Text>
+              </View>
+            )}
+          </View>
+        </View>
+
         {/* Modes Grid */}
-        <View className="px-6 pt-8 pb-12">
+        <View className="px-5 pt-6 pb-8">
           <Text className="text-light-textPrimary dark:text-dark-textPrimary text-lg font-bold mb-4">
             Choose Attendance Mode
           </Text>
@@ -152,49 +241,25 @@ export default function AttendanceOptions() {
             ))}
           </View>
 
-          {/* Today's Summary Card */}
-          <View className="mt-8 p-5 bg-light-primary/5 dark:bg-dark-primary/5 rounded-xl border border-light-primary/20 dark:border-dark-primary/20">
-            <View className="flex-row items-center mb-3">
-              <Ionicons name="today-outline" size={20} color="#0D9488" />
+          {/* Tips Section */}
+          <View className="mt-8 p-4 bg-light-primary/5 dark:bg-dark-primary/5 rounded-xl border border-light-primary/20 dark:border-dark-primary/20">
+            <View className="flex-row items-center mb-2">
+              <Ionicons name="bulb-outline" size={18} color="#F59E0B" />
               <Text className="text-light-textPrimary dark:text-dark-textPrimary font-semibold ml-2">
-                Today's Summary
+                Pro Tips
               </Text>
             </View>
-            <View className="flex-row justify-between">
-              <View className="items-center">
-                <Text className="text-2xl font-bold text-light-primary dark:text-dark-primary">
-                  0
-                </Text>
-                <Text className="text-light-textSecondary dark:text-dark-textSecondary text-xs mt-1">
-                  Present
-                </Text>
-              </View>
-              <View className="w-px bg-light-border dark:border-dark-border" />
-              <View className="items-center">
-                <Text className="text-2xl font-bold text-light-textSecondary dark:text-dark-textSecondary">
-                  0
-                </Text>
-                <Text className="text-light-textSecondary dark:text-dark-textSecondary text-xs mt-1">
-                  Absent
-                </Text>
-              </View>
-              <View className="w-px bg-light-border dark:border-dark-border" />
-              <View className="items-center">
-                <Text className="text-2xl font-bold text-light-success dark:text-dark-success">
-                  0%
-                </Text>
-                <Text className="text-light-textSecondary dark:text-dark-textSecondary text-xs mt-1">
-                  Attendance
-                </Text>
-              </View>
-            </View>
-            <TouchableOpacity className="mt-4 pt-3 border-t border-light-border dark:border-dark-border">
-              <Text className="text-light-primary dark:text-dark-primary text-sm text-center font-medium">
-                View Full Report →
-              </Text>
-            </TouchableOpacity>
+            <Text className="text-light-textSecondary dark:text-dark-textSecondary text-xs">
+              • Use AI Auto mode for quick attendance with classroom photos{'\n'}
+              • Use Manual mode for precise control over each student{'\n'}
+              • Always review attendance before finalizing{'\n'}
+              • Finalized attendance cannot be edited
+            </Text>
           </View>
         </View>
+
+        {/* Bottom Space */}
+        <View className="h-4" />
       </ScrollView>
     </>
   );

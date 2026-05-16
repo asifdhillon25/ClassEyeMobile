@@ -84,29 +84,20 @@ export default function TeacherHome() {
     },
   ];
 
-  const quickActions = [
-    { 
-      title: "My Classes", 
-      description: "View and manage your classes", 
-      icon: "book-outline", 
-      route: "/(protected)/(teacher)/classes",
-      color: "#0D9488"
-    },
-    { 
-      title: "Attendance History", 
-      description: "View past attendance records", 
-      icon: "time-outline", 
-      route: "/(protected)/attendance/history",
-      color: "#8B5CF6"
-    },
-    { 
-      title: "Attendance Reports", 
-      description: "Generate detailed reports", 
-      icon: "document-text-outline", 
-      route: "/(protected)/attendance/report",
-      color: "#F59E0B"
-    }
-  ];
+  // Helper function to navigate to class-specific screens
+  const navigateToClassHistory = (classId, className) => {
+    router.push({
+      pathname: `/attendance/${classId}/history`,
+      params: { classId, className }
+    });
+  };
+
+  const navigateToClassReport = (classId, className) => {
+    router.push({
+      pathname: `/attendance/${classId}/report`,
+      params: { classId, className }
+    });
+  };
 
   if (loading) {
     return (
@@ -217,25 +208,71 @@ export default function TeacherHome() {
         ) : (
           <View className="space-y-3">
             {teacherClasses.slice(0, 3).map((cls, index) => (
-              <TouchableOpacity
-                key={cls._id || index}
-                onPress={() => router.push(`/(protected)/(teacher)/classes/${cls._id}`)}
-                className="bg-light-surface dark:bg-dark-surface rounded-xl p-4 shadow-card flex-row items-center"
-                activeOpacity={0.7}
-              >
-                <View className="w-10 h-10 rounded-full bg-light-primary/10 dark:bg-dark-primary/10 items-center justify-center mr-3">
-                  <Ionicons name="book-outline" size={20} color="#0D9488" />
+              <View key={cls._id || index}>
+                <TouchableOpacity
+                  onPress={() => router.push(`/(protected)/(teacher)/classes/${cls._id}`)}
+                  className="bg-light-surface dark:bg-dark-surface rounded-xl p-4 shadow-card"
+                  activeOpacity={0.7}
+                >
+                  <View className="flex-row items-center">
+                    <View className="w-10 h-10 rounded-full bg-light-primary/10 dark:bg-dark-primary/10 items-center justify-center mr-3">
+                      <Ionicons name="book-outline" size={20} color="#0D9488" />
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-light-textPrimary dark:text-dark-textPrimary font-semibold">
+                        {cls.course_name}
+                      </Text>
+                      <Text className="text-light-textSecondary dark:text-dark-textSecondary text-xs mt-0.5">
+                        {cls.section || 'Section A'} • {cls.students?.length || 0} Students
+                      </Text>
+                    </View>
+                    <Ionicons name="chevron-forward-outline" size={18} color="#94A3B8" />
+                  </View>
+                </TouchableOpacity>
+                
+                {/* Class-specific action buttons */}
+                <View className="flex-row gap-2 mt-2 ml-12">
+                  <TouchableOpacity
+                    onPress={() => router.push(`/attendance/${cls._id}/manual`)}
+                    className="flex-1 bg-light-primary/10 dark:bg-dark-primary/10 py-2 rounded-lg flex-row items-center justify-center"
+                  >
+                    <Ionicons name="create-outline" size={14} color="#0D9488" />
+                    <Text className="text-light-primary dark:text-dark-primary text-xs font-medium ml-1">
+                      Mark
+                    </Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity
+                    onPress={() => router.push(`/attendance/${cls._id}/auto`)}
+                    className="flex-1 bg-light-accent/10 dark:bg-dark-accent/10 py-2 rounded-lg flex-row items-center justify-center"
+                  >
+                    <Ionicons name="camera-outline" size={14} color="#1D4ED8" />
+                    <Text className="text-light-accent dark:text-dark-accent text-xs font-medium ml-1">
+                      AI
+                    </Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity
+                    onPress={() => navigateToClassHistory(cls._id, cls.course_name)}
+                    className="flex-1 bg-purple-500/10 py-2 rounded-lg flex-row items-center justify-center"
+                  >
+                    <Ionicons name="time-outline" size={14} color="#8B5CF6" />
+                    <Text className="text-purple-600 dark:text-purple-400 text-xs font-medium ml-1">
+                      History
+                    </Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity
+                    onPress={() => navigateToClassReport(cls._id, cls.course_name)}
+                    className="flex-1 bg-amber-500/10 py-2 rounded-lg flex-row items-center justify-center"
+                  >
+                    <Ionicons name="document-text-outline" size={14} color="#F59E0B" />
+                    <Text className="text-amber-600 dark:text-amber-400 text-xs font-medium ml-1">
+                      Report
+                    </Text>
+                  </TouchableOpacity>
                 </View>
-                <View className="flex-1">
-                  <Text className="text-light-textPrimary dark:text-dark-textPrimary font-semibold">
-                    {cls.course_name}
-                  </Text>
-                  <Text className="text-light-textSecondary dark:text-dark-textSecondary text-xs mt-0.5">
-                    {cls.section || 'Section A'} • {cls.students?.length || 0} Students
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward-outline" size={18} color="#94A3B8" />
-              </TouchableOpacity>
+              </View>
             ))}
           </View>
         )}
@@ -247,30 +284,24 @@ export default function TeacherHome() {
           Quick Actions
         </Text>
         <View className="space-y-3">
-          {quickActions.map((action, index) => (
-            <TouchableOpacity
-              key={index}
-              onPress={() => router.push(action.route)}
-              className="bg-light-surface dark:bg-dark-surface rounded-xl p-4 shadow-card flex-row items-center"
-              activeOpacity={0.7}
-            >
-              <View 
-                className="w-10 h-10 rounded-full items-center justify-center mr-3"
-                style={{ backgroundColor: `${action.color}15` }}
-              >
-                <Ionicons name={action.icon} size={22} color={action.color} />
-              </View>
-              <View className="flex-1">
-                <Text className="text-light-textPrimary dark:text-dark-textPrimary text-base font-semibold">
-                  {action.title}
-                </Text>
-                <Text className="text-light-textSecondary dark:text-dark-textSecondary text-xs mt-0.5">
-                  {action.description}
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward-outline" size={18} color="#94A3B8" />
-            </TouchableOpacity>
-          ))}
+          <TouchableOpacity
+            onPress={() => router.push("/(protected)/(teacher)/classes")}
+            className="bg-light-surface dark:bg-dark-surface rounded-xl p-4 shadow-card flex-row items-center"
+            activeOpacity={0.7}
+          >
+            <View className="w-10 h-10 rounded-full items-center justify-center mr-3 bg-light-primary/15">
+              <Ionicons name="book-outline" size={22} color="#0D9488" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-light-textPrimary dark:text-dark-textPrimary text-base font-semibold">
+                My Classes
+              </Text>
+              <Text className="text-light-textSecondary dark:text-dark-textSecondary text-xs mt-0.5">
+                View and manage your classes
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward-outline" size={18} color="#94A3B8" />
+          </TouchableOpacity>
         </View>
       </View>
 
