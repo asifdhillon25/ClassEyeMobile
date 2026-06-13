@@ -49,7 +49,7 @@ export default function Login() {
         const role = user.role?.toLowerCase();
         
         if (role === "admin") {
-          router.replace("/(protected)/(teacher)");
+          router.replace("/(protected)/(admin)");
         } else if (role === "teacher") {
           router.replace("/(protected)/(teacher)");
         } else if (role === "student") {
@@ -89,11 +89,11 @@ export default function Login() {
           
           {/* Logo/Brand Section */}
           <View className="items-center mb-10">
-            <View className="w-20 h-20 rounded-2xl bg-gradient-accent items-center justify-center mb-4 shadow-lg">
+            {/* <View className="w-20 h-20 rounded-2xl bg-gradient-accent items-center justify-center mb-4 shadow-lg">
               <Text className="text-4xl font-bold text-white">📚</Text>
-            </View>
+            </View> */}
             <Text className="text-4xl font-bold text-light-textPrimary dark:text-dark-textPrimary mb-2">
-              Attendance Pro
+             ClassEye
             </Text>
             <Text className="text-light-textSecondary dark:text-dark-textSecondary text-center">
               Face Recognition Based Attendance System

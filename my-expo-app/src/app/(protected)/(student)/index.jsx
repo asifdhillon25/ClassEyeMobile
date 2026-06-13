@@ -13,6 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useState, useEffect, useCallback } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import api from "../../../services/api";
+import AttendanceReportButton from "../../../components/AttendanceReportButton";
 
 export default function StudentDashboard() {
   const [loading, setLoading] = useState(true);
@@ -41,6 +42,7 @@ export default function StudentDashboard() {
     attendance_percentage: 0,
   });
 
+  const [attendanceDetails, setAttendanceDetails] = useState([]);
   const [recentAttendance, setRecentAttendance] = useState([]);
 
   const formatDate = (date) => {
@@ -51,28 +53,11 @@ export default function StudentDashboard() {
   const fetchDashboardData = async () => {
     try {
       const user = await AsyncStorage.getItem("user");
-     
 
       if (user) {
         const userData = JSON.parse(user);
-        console.log("User Data from AsyncStorage:", userData);
         const studentId = userData.linked_id;
 
-        // First show stored user data
-        setStudentInfo((prev) => ({
-          ...prev,
-          id: studentId || "", 
-          name: userData.name || "Student",
-          email: userData.email || "",
-          roll_no: userData.roll_no || "",
-          photo_url: userData.photo_url || null,
-          department: userData.department || "",
-          year: userData.year || "",
-          status: userData.status || "",
-        }));
-
-        // Fetch full student info by ID
-        console.log("Fetching student info for ID:", studentId);
         const studentRes = await api.get(`/students/${studentId}`);
 
         if (studentRes.data.status === "success") {
@@ -95,14 +80,16 @@ export default function StudentDashboard() {
           });
         }
 
-        // Fetch attendance summary
         const attendanceRes = await api.get(
-          `/attendance/student/${studentId}/summary`
+          `/attendance/student/${studentId}/details`
         );
 
         if (attendanceRes.data.success) {
           setAttendanceSummary(attendanceRes.data.data.summary);
-          setRecentAttendance(attendanceRes.data.data.recent || []);
+          setAttendanceDetails(attendanceRes.data.data.attendance || []);
+          setRecentAttendance(
+            attendanceRes.data.data.attendance?.slice(0, 5) || []
+          );
         }
       }
     } catch (error) {
@@ -160,21 +147,14 @@ export default function StudentDashboard() {
       title: "My Attendance",
       description: "View detailed attendance records",
       icon: "calendar-outline",
-      route: "/(protected)/student/attendance",
+      route: "/(protected)/(student)/attendance",
       color: "#0D9488",
-    },
-    {
-      title: "Download Report",
-      description: "Download attendance report",
-      icon: "download-outline",
-      route: "/(protected)/student/report",
-      color: "#8B5CF6",
     },
     {
       title: "Profile",
       description: "View and edit profile",
       icon: "person-outline",
-      route: "/(protected)/student/profile",
+      route: "/(protected)/(student)/profile",
       color: "#F59E0B",
     },
   ];
@@ -199,7 +179,6 @@ export default function StudentDashboard() {
     >
       <StatusBar style="auto" />
 
-      {/* Header */}
       <View className="bg-light-primary dark:bg-dark-primary pt-12 pb-6 px-6 rounded-b-3xl shadow-lg">
         <View className="flex-row justify-between items-center">
           <View className="flex-row items-center flex-1">
@@ -242,7 +221,6 @@ export default function StudentDashboard() {
         </View>
       </View>
 
-      {/* Attendance Stats */}
       <View className="px-6 -mt-6">
         <View className="flex-row flex-wrap gap-3">
           {studentStats.map((stat, index) => (
@@ -261,7 +239,9 @@ export default function StudentDashboard() {
                     style={{
                       color:
                         stat.label === "Attendance"
-                          ? getAttendanceColor(parseFloat(stat.value))
+                          ? getAttendanceColor(
+                              attendanceSummary.attendance_percentage || 0
+                            )
                           : undefined,
                     }}
                   >
@@ -281,7 +261,14 @@ export default function StudentDashboard() {
         </View>
       </View>
 
-      {/* Student Information */}
+      <View className="px-6 mt-6">
+        <AttendanceReportButton
+          student={studentInfo}
+          summary={attendanceSummary}
+          attendance={attendanceDetails}
+        />
+      </View>
+
       <View className="px-6 mt-6">
         <Text className="text-light-textPrimary dark:text-dark-textPrimary text-lg font-bold mb-3">
           Student Information
@@ -305,12 +292,17 @@ export default function StudentDashboard() {
             label="Embeddings Updated"
             value={formatDate(studentInfo.embeddings_updated_at)}
           />
-          <InfoRow label="Profile Created" value={formatDate(studentInfo.created_at)} />
-          <InfoRow label="Last Updated" value={formatDate(studentInfo.updated_at)} />
+          <InfoRow
+            label="Profile Created"
+            value={formatDate(studentInfo.created_at)}
+          />
+          <InfoRow
+            label="Last Updated"
+            value={formatDate(studentInfo.updated_at)}
+          />
         </View>
       </View>
 
-      {/* Attendance Progress */}
       <View className="px-6 mt-6">
         <View className="bg-light-surface dark:bg-dark-surface rounded-xl p-4 shadow-card">
           <View className="flex-row justify-between items-center mb-2">
@@ -356,7 +348,6 @@ export default function StudentDashboard() {
         </View>
       </View>
 
-      {/* Recent Attendance */}
       <View className="px-6 mt-6">
         <View className="flex-row justify-between items-center mb-3">
           <Text className="text-light-textPrimary dark:text-dark-textPrimary text-lg font-bold">
@@ -364,7 +355,7 @@ export default function StudentDashboard() {
           </Text>
 
           <TouchableOpacity
-            onPress={() => router.push("/(protected)/student/attendance")}
+            onPress={() => router.push("/(protected)/(student)/attendance")}
           >
             <Text className="text-light-primary dark:text-dark-primary text-sm font-medium">
               View All
@@ -382,7 +373,7 @@ export default function StudentDashboard() {
         ) : (
           <View className="bg-light-surface dark:bg-dark-surface rounded-xl p-4 shadow-card">
             <View className="space-y-3">
-              {recentAttendance.slice(0, 5).map((record, index) => (
+              {recentAttendance.map((record, index) => (
                 <View key={index} className="flex-row items-center">
                   <View
                     className={`w-2 h-2 rounded-full mr-3 ${
@@ -394,13 +385,21 @@ export default function StudentDashboard() {
 
                   <View className="flex-1">
                     <Text className="text-light-textPrimary dark:text-dark-textPrimary text-sm font-medium">
-                      {record.class_name || "Class"}
+                      {record.class?.name ||
+                        record.class?.class_name ||
+                        record.class_name ||
+                        "Class"}
                     </Text>
 
                     <Text className="text-light-textSecondary dark:text-dark-textSecondary text-xs">
                       {record.date
                         ? new Date(record.date).toLocaleDateString()
                         : "Date not available"}
+                    </Text>
+
+                    <Text className="text-light-textSecondary dark:text-dark-textSecondary text-xs">
+                      Marked by: {record.marked_by || "N/A"} • Method:{" "}
+                      {record.method || "N/A"}
                     </Text>
                   </View>
 
@@ -428,7 +427,6 @@ export default function StudentDashboard() {
         )}
       </View>
 
-      {/* Quick Actions */}
       <View className="px-6 mt-6">
         <Text className="text-light-textPrimary dark:text-dark-textPrimary text-lg font-bold mb-3">
           Quick Actions

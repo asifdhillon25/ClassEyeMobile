@@ -1,10 +1,12 @@
-import { View, Text, TouchableOpacity, ScrollView, RefreshControl, ActivityIndicator } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, RefreshControl, ActivityIndicator, Dimensions } from "react-native";
 import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect, useCallback } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import api from "../../../services/api";
+
+const { width } = Dimensions.get('window');
 
 export default function AdminDashboard() {
   const [dashboardData, setDashboardData] = useState(null);
@@ -13,24 +15,23 @@ export default function AdminDashboard() {
   const [adminInfo, setAdminInfo] = useState({
     name: "",
     email: "",
-    id: ""
+    id: "",
+    role: ""
   });
 
-  // Fetch dashboard data
   const fetchDashboardData = async () => {
     try {
-      // Get admin info from storage
       const user = await AsyncStorage.getItem("user");
       if (user) {
         const userData = JSON.parse(user);
         setAdminInfo({
           name: userData.name || "Administrator",
           email: userData.email || "",
-          id: userData._id || userData.id || ""
+          id: userData._id || userData.id || "",
+          role: userData.role || "Admin"
         });
       }
 
-      // Fetch dashboard overview (admin-specific stats)
       const response = await api.get("/dashboard/overview");
       if (response.data.success) {
         setDashboardData(response.data.data);
@@ -52,175 +53,217 @@ export default function AdminDashboard() {
     fetchDashboardData();
   }, []);
 
-  // Admin stats from API
   const adminStats = dashboardData ? [
     { 
       label: "Total Students", 
       value: dashboardData.kpis.totalStudents?.toString() || "0", 
       icon: "people-outline", 
       color: "#0D9488",
-      change: dashboardData.trends?.newStudentsThisMonth || 0
+      bgColor: "#E6F7F5",
+      change: dashboardData.trends?.newStudentsThisMonth || 0,
+      changeText: "new this month"
     },
     { 
       label: "Total Teachers", 
       value: dashboardData.kpis.totalTeachers?.toString() || "0", 
-      icon: "person-outline", 
-      color: "#1D4ED8",
-      change: dashboardData.trends?.newTeachersThisMonth || 0
+      icon: "school-outline", 
+      color: "#3B82F6",
+      bgColor: "#EFF6FF",
+      change: dashboardData.trends?.newTeachersThisMonth || 0,
+      changeText: "new this month"
     },
     { 
       label: "Active Classes", 
       value: dashboardData.kpis.activeClasses?.toString() || "0", 
       icon: "book-outline", 
-      color: "#22D3EE",
+      color: "#06B6D4",
+      bgColor: "#E0F7FA",
       change: null
     },
     { 
       label: "Today's Attendance", 
       value: `${dashboardData.kpis.attendanceTodayPercent || 0}%`, 
-      icon: "stats-chart-outline", 
+      icon: "calendar-outline", 
       color: "#10B981",
+      bgColor: "#E6F9F0",
+      subValue: `${dashboardData.kpis.attendanceTodayCount || 0} / ${dashboardData.kpis.totalStudents || 0}`,
       change: null
     },
   ] : [];
 
-  // Risk metrics
   const riskMetrics = dashboardData ? [
     {
-      label: "At Risk Students",
+      label: "At Risk",
       value: dashboardData.risks.atRiskStudents || 0,
       description: "Below 75% attendance",
-      icon: "warning-outline",
-      color: "#F59E0B"
+      icon: "alert-triangle-outline",
+      color: "#F59E0B",
+      bgColor: "#FEF3C7"
     },
     {
-      label: "Inactive Students",
+      label: "Inactive",
       value: dashboardData.risks.inactiveStudents || 0,
-      description: "No attendance in 14 days",
+      description: "No activity in 14 days",
       icon: "person-remove-outline",
-      color: "#EF4444"
+      color: "#EF4444",
+      bgColor: "#FEE2E2"
     },
     {
-      label: "Classes Pending",
+      label: "Pending Classes",
       value: dashboardData.risks.classesWithoutAttendanceThisWeek || 0,
-      description: "No attendance this week",
-      icon: "calendar-outline",
-      color: "#8B5CF6"
+      description: "No attendance recorded",
+      icon: "time-outline",
+      color: "#8B5CF6",
+      bgColor: "#EDE9FE"
     }
   ] : [];
 
-  const quickActions = [
-    { 
-      title: "Manage Students", 
-      description: "Add, edit, or remove students", 
-      icon: "people-outline", 
-      route: "/(protected)/admin/students",
-      color: "#0D9488"
-    },
-    { 
-      title: "Manage Teachers", 
-      description: "Manage teacher accounts", 
-      icon: "person-outline", 
-      route: "/(protected)/admin/teachers",
-      color: "#1D4ED8"
-    },
-    { 
-      title: "Manage Classes", 
-      description: "Create and manage classes", 
-      icon: "book-outline", 
-      route: "/(protected)/admin/classes",
-      color: "#22D3EE"
-    },
-    { 
-      title: "System Reports", 
-      description: "View system-wide reports", 
-      icon: "document-text-outline", 
-      route: "/(protected)/admin/reports",
-      color: "#F59E0B"
-    },
-    { 
-      title: "Attendance Overview", 
-      description: "Monitor attendance across all classes", 
-      icon: "calendar-outline", 
-      route: "/(protected)/admin/attendance",
-      color: "#8B5CF6"
-    }
-  ];
+  const StatCard = ({ stat }) => (
+    <View 
+      className="rounded-2xl p-4 shadow-sm"
+      style={{ 
+        flex: 1, 
+        minWidth: width < 400 ? '100%' : '48%', 
+        marginBottom: 12,
+        backgroundColor: stat.bgColor,
+        borderWidth: 1,
+        borderColor: `${stat.color}20`
+      }}
+    >
+      <View className="flex-row justify-between items-start">
+        <View className="flex-1">
+          <Text className="text-gray-600 text-xs font-medium mb-1">
+            {stat.label}
+          </Text>
+          <Text className="text-gray-900 text-3xl font-bold">
+            {stat.value}
+          </Text>
+          {stat.subValue && (
+            <Text className="text-gray-500 text-xs mt-1">
+              {stat.subValue}
+            </Text>
+          )}
+          {stat.change && stat.change > 0 && (
+            <View className="flex-row items-center mt-2">
+              <Ionicons name="arrow-up-outline" size={12} color="#10B981" />
+              <Text className="text-green-600 text-xs ml-1">
+                +{stat.change} {stat.changeText}
+              </Text>
+            </View>
+          )}
+        </View>
+        <View 
+          className="rounded-full p-2"
+          style={{ backgroundColor: `${stat.color}20` }}
+        >
+          <Ionicons name={stat.icon} size={24} color={stat.color} />
+        </View>
+      </View>
+    </View>
+  );
+
+  const RiskCard = ({ metric }) => (
+    <View 
+      className="rounded-xl p-3"
+      style={{ 
+        backgroundColor: metric.bgColor, 
+        flex: 1, 
+        minWidth: width < 400 ? '100%' : '30%',
+        borderWidth: 1,
+        borderColor: `${metric.color}30`
+      }}
+    >
+      <View className="flex-row items-center mb-2">
+        <Ionicons name={metric.icon} size={16} color={metric.color} />
+        <Text className="text-xs font-semibold ml-1" style={{ color: metric.color }}>
+          {metric.label}
+        </Text>
+      </View>
+      <Text className="text-2xl font-bold" style={{ color: metric.color }}>
+        {metric.value}
+      </Text>
+      <Text className="text-gray-600 text-xs mt-1">
+        {metric.description}
+      </Text>
+    </View>
+  );
 
   if (loading) {
     return (
-      <View className="flex-1 justify-center items-center bg-light-background dark:bg-dark-background">
-        <ActivityIndicator size="large" color="#0D9488" />
-        <Text className="mt-4 text-light-textSecondary dark:text-dark-textSecondary">
-          Loading dashboard...
-        </Text>
+      <View className="flex-1 justify-center items-center bg-gray-50 dark:bg-gray-900">
+        <View className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-xl">
+          <ActivityIndicator size="large" color="#0D9488" />
+          <Text className="mt-4 text-gray-600 dark:text-gray-400 text-center">
+            Loading dashboard...
+          </Text>
+        </View>
       </View>
     );
   }
 
   return (
     <ScrollView 
-      className="flex-1 bg-light-background dark:bg-dark-background"
+      className="flex-1 bg-gray-50 dark:bg-gray-900"
+      showsVerticalScrollIndicator={false}
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#0D9488" />
       }
     >
-      <StatusBar style="auto" />
+      <StatusBar style="dark" />
       
-      {/* Header Section with Admin Profile */}
-      <View className="bg-light-primary dark:bg-dark-primary pt-12 pb-6 px-6 rounded-b-3xl shadow-lg">
-        <View className="flex-row justify-between items-center">
+      {/* Modern Header */}
+      <View 
+        className="pt-12 pb-8 px-6"
+        style={{ 
+          backgroundColor: '#0F172A',
+          borderBottomLeftRadius: 30,
+          borderBottomRightRadius: 30
+        }}
+      >
+        <View className="flex-row justify-between items-start mb-6">
           <View>
-            <Text className="text-white text-3xl font-bold">
-              Welcome, {adminInfo.name.split(' ')[0]} 👋
+            <Text className="text-gray-400 text-sm font-medium mb-1">
+              Welcome back,
             </Text>
-            <Text className="text-white/80 text-base mt-1">
-              Admin Dashboard
+            <Text className="text-white text-2xl font-bold">
+              {adminInfo.name.split(' ')[0]}
             </Text>
-            <Text className="text-white/60 text-sm mt-0.5">
-              {adminInfo.email}
-            </Text>
+            <View className="flex-row items-center mt-2">
+              <View className="bg-emerald-500/20 px-2 py-1 rounded-full">
+                <Text className="text-emerald-400 text-xs font-medium">
+                  {adminInfo.role}
+                </Text>
+              </View>
+              <View className="flex-row items-center ml-2">
+                <Ionicons name="mail-outline" size={12} color="#94A3B8" />
+                <Text className="text-gray-400 text-xs ml-1" numberOfLines={1}>
+                  {adminInfo.email}
+                </Text>
+              </View>
+            </View>
           </View>
           <TouchableOpacity 
             onPress={() => router.push("/settings")}
-            className="w-12 h-12 bg-white/20 rounded-full items-center justify-center"
+            className="w-10 h-10 bg-white/10 rounded-full items-center justify-center"
+            activeOpacity={0.7}
           >
-            <Ionicons name="settings-outline" size={24} color="white" />
+            <Ionicons name="settings-outline" size={20} color="white" />
           </TouchableOpacity>
+        </View>
+
+        {/* Welcome Message */}
+        <View className="mt-2">
+          <Text className="text-gray-300 text-sm leading-5">
+            Monitor your institution's performance and manage operations from this central dashboard.
+          </Text>
         </View>
       </View>
 
       {/* Stats Grid */}
-      <View className="px-6 -mt-8">
-        <View className="flex-row flex-wrap gap-3">
+      <View className="px-6 -mt-6">
+        <View className="flex-row flex-wrap justify-between gap-3">
           {adminStats.map((stat, index) => (
-            <View 
-              key={index} 
-              className="bg-light-surface dark:bg-dark-surface rounded-xl p-4 shadow-card flex-1"
-              style={{ minWidth: '45%' }}
-            >
-              <View className="flex-row justify-between items-start">
-                <View className="flex-1">
-                  <Text className="text-light-textSecondary dark:text-dark-textSecondary text-xs">
-                    {stat.label}
-                  </Text>
-                  <Text className="text-light-textPrimary dark:text-dark-textPrimary text-2xl font-bold mt-1">
-                    {stat.value}
-                  </Text>
-                  {stat.change !== null && stat.change > 0 && (
-                    <Text className="text-light-success dark:text-dark-success text-xs mt-1">
-                      +{stat.change} this month
-                    </Text>
-                  )}
-                </View>
-                <View 
-                  className="w-8 h-8 rounded-full items-center justify-center"
-                  style={{ backgroundColor: `${stat.color}20` }}
-                >
-                  <Ionicons name={stat.icon} size={16} color={stat.color} />
-                </View>
-              </View>
-            </View>
+            <StatCard key={index} stat={stat} />
           ))}
         </View>
       </View>
@@ -229,136 +272,152 @@ export default function AdminDashboard() {
       {dashboardData && (dashboardData.risks.atRiskStudents > 0 || dashboardData.risks.inactiveStudents > 0) && (
         <View className="px-6 mt-6">
           <View className="flex-row items-center mb-3">
-            <Ionicons name="alert-circle-outline" size={20} color="#EF4444" />
-            <Text className="text-light-textPrimary dark:text-dark-textPrimary text-lg font-bold ml-2">
+            <View className="w-1 h-5 bg-red-500 rounded-full mr-2" />
+            <Text className="text-gray-900 dark:text-white text-lg font-bold">
               Risk Alerts
             </Text>
+            <View className="ml-2 bg-red-100 rounded-full px-2 py-0.5">
+              <Text className="text-red-600 text-xs font-semibold">
+                Action Required
+              </Text>
+            </View>
           </View>
           <View className="flex-row flex-wrap gap-3">
             {riskMetrics.map((metric, index) => (
               metric.value > 0 && (
-                <View 
-                  key={index}
-                  className="flex-1 bg-light-surface dark:bg-dark-surface rounded-xl p-3 shadow-card"
-                  style={{ minWidth: '30%' }}
-                >
-                  <View className="flex-row items-center mb-1">
-                    <Ionicons name={metric.icon} size={14} color={metric.color} />
-                    <Text className="text-light-textSecondary dark:text-dark-textSecondary text-xs ml-1">
-                      {metric.label}
-                    </Text>
-                  </View>
-                  <Text className="text-light-textPrimary dark:text-dark-textPrimary text-xl font-bold">
-                    {metric.value}
-                  </Text>
-                  <Text className="text-light-textMuted dark:text-dark-textMuted text-[10px] mt-1">
-                    {metric.description}
-                  </Text>
-                </View>
+                <RiskCard key={index} metric={metric} />
               )
             ))}
           </View>
         </View>
       )}
 
-      {/* AI & System Health */}
+      {/* AI & System Intelligence */}
       {dashboardData && (
         <View className="px-6 mt-6">
           <View className="flex-row items-center mb-3">
-            <Ionicons name="hardware-chip-outline" size={18} color="#0D9488" />
-            <Text className="text-light-textPrimary dark:text-dark-textPrimary text-lg font-bold ml-2">
-              System Health
+            <View className="w-1 h-5 bg-emerald-500 rounded-full mr-2" />
+            <Text className="text-gray-900 dark:text-white text-lg font-bold">
+              System Intelligence
             </Text>
+            <Ionicons name="flash-outline" size={16} color="#10B981" className="ml-2" />
           </View>
-          <View className="bg-light-surface dark:bg-dark-surface rounded-xl p-4 shadow-card">
-            <View className="flex-row justify-between items-center mb-3">
-              <View className="flex-row items-center">
-                <Ionicons name="scan-outline" size={16} color="#0D9488" />
-                <Text className="text-light-textSecondary dark:text-dark-textSecondary text-sm ml-2">
-                  Face Recognition Coverage
+          
+          <View className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm">
+            {/* AI Coverage */}
+            <View className="mb-4">
+              <View className="flex-row justify-between items-center mb-2">
+                <View className="flex-row items-center">
+                  <View className="bg-teal-100 dark:bg-teal-900/30 p-1.5 rounded-lg">
+                    <Ionicons name="scan-outline" size={16} color="#0D9488" />
+                  </View>
+                  <Text className="text-gray-700 dark:text-gray-300 text-sm font-medium ml-2">
+                    Face Recognition Coverage
+                  </Text>
+                </View>
+                <Text className="text-gray-900 dark:text-white font-bold text-lg">
+                  {dashboardData.aiUsage?.embeddingCoveragePercent || 0}%
                 </Text>
               </View>
-              <Text className="text-light-textPrimary dark:text-dark-textPrimary font-bold">
-                {dashboardData.aiUsage?.embeddingCoveragePercent || 0}%
-              </Text>
+              <View className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                <View 
+                  className="h-full rounded-full"
+                  style={{ 
+                    backgroundColor: '#0D9488',
+                    width: `${dashboardData.aiUsage?.embeddingCoveragePercent || 0}%` 
+                  }}
+                />
+              </View>
             </View>
-            <View className="h-px bg-light-border dark:bg-dark-border my-2" />
-            <View className="flex-row justify-between items-center">
+
+            {/* AI Usage Stats */}
+            <View className="flex-row justify-between items-center pt-3 border-t border-gray-200 dark:border-gray-700">
               <View className="flex-row items-center">
-                <Ionicons name="camera-outline" size={16} color="#22D3EE" />
-                <Text className="text-light-textSecondary dark:text-dark-textSecondary text-sm ml-2">
-                  AI Attendance Usage
-                </Text>
+                <View className="bg-cyan-100 dark:bg-cyan-900/30 p-1.5 rounded-lg">
+                  <Ionicons name="camera-outline" size={16} color="#06B6D4" />
+                </View>
+                <View className="ml-2">
+                  <Text className="text-gray-500 dark:text-gray-400 text-xs">
+                    AI Attendance
+                  </Text>
+                  <Text className="text-gray-900 dark:text-white font-semibold">
+                    {dashboardData.aiUsage?.imageAttendanceRatio || 0}% usage
+                  </Text>
+                </View>
               </View>
-              <Text className="text-light-textPrimary dark:text-dark-textPrimary font-bold">
-                {dashboardData.aiUsage?.imageAttendanceRatio || 0}%
-              </Text>
+              <View className="flex-row items-center">
+                <View className="bg-emerald-100 dark:bg-emerald-900/30 p-1.5 rounded-lg">
+                  <Ionicons name="trending-up-outline" size={16} color="#10B981" />
+                </View>
+                <View className="ml-2">
+                  <Text className="text-gray-500 dark:text-gray-400 text-xs">
+                    Weekly Attendance
+                  </Text>
+                  <Text className="text-gray-900 dark:text-white font-semibold">
+                    {dashboardData.trends?.attendanceLast7Days || 0} records
+                  </Text>
+                </View>
+              </View>
             </View>
-            <View className="h-px bg-light-border dark:bg-dark-border my-2" />
-            <View className="flex-row justify-between items-center">
-              <View className="flex-row items-center">
-                <Ionicons name="trending-up-outline" size={16} color="#10B981" />
-                <Text className="text-light-textSecondary dark:text-dark-textSecondary text-sm ml-2">
-                  Attendance This Week
-                </Text>
+
+            {/* Quick Insight */}
+            <View className="mt-4 pt-3 border-t border-gray-200 dark:border-gray-700">
+              <View className="flex-row items-center justify-between">
+                <View className="flex-row items-center flex-1">
+                  <Ionicons name="bulb-outline" size={16} color="#F59E0B" />
+                  <Text className="text-gray-600 dark:text-gray-400 text-xs ml-1">
+                    AI Insight:
+                  </Text>
+                  <Text className="text-gray-700 dark:text-gray-300 text-xs ml-1 flex-1" numberOfLines={1}>
+                    {dashboardData.aiUsage?.embeddingCoveragePercent > 70 
+                      ? "Good facial recognition coverage" 
+                      : "Consider updating student photos"}
+                  </Text>
+                </View>
+                <Ionicons name="arrow-forward-outline" size={14} color="#94A3B8" />
               </View>
-              <Text className="text-light-textPrimary dark:text-dark-textPrimary font-bold">
-                {dashboardData.trends?.attendanceLast7Days || 0} records
-              </Text>
             </View>
           </View>
         </View>
       )}
 
-      {/* Quick Actions Section */}
-      <View className="px-6 mt-6">
-        <Text className="text-light-textPrimary dark:text-dark-textPrimary text-lg font-bold mb-3">
-          Admin Actions
-        </Text>
-        <View className="space-y-3">
-          {quickActions.map((action, index) => (
-            <TouchableOpacity
-              key={index}
-              onPress={() => router.push(action.route)}
-              className="bg-light-surface dark:bg-dark-surface rounded-xl p-4 shadow-card flex-row items-center"
-              activeOpacity={0.7}
-            >
-              <View 
-                className="w-10 h-10 rounded-full items-center justify-center mr-3"
-                style={{ backgroundColor: `${action.color}15` }}
-              >
-                <Ionicons name={action.icon} size={22} color={action.color} />
-              </View>
-              <View className="flex-1">
-                <Text className="text-light-textPrimary dark:text-dark-textPrimary text-base font-semibold">
-                  {action.title}
-                </Text>
-                <Text className="text-light-textSecondary dark:text-dark-textSecondary text-xs mt-0.5">
-                  {action.description}
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward-outline" size={18} color="#94A3B8" />
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-
-      {/* System Status */}
-      <View className="px-6 mt-6 mb-8">
-        <View className="bg-light-success/5 dark:bg-dark-success/5 rounded-xl p-4 border border-light-success/20 dark:border-dark-success/20">
-          <View className="flex-row items-center mb-2">
-            <Ionicons name="checkmark-circle-outline" size={18} color="#10B981" />
-            <Text className="text-light-textPrimary dark:text-dark-textPrimary font-semibold ml-2">
-              System Status
+      {/* Recent Activity Section */}
+      {dashboardData && dashboardData.recentActivity && dashboardData.recentActivity.length > 0 && (
+        <View className="px-6 mt-6 mb-8">
+          <View className="flex-row items-center mb-3">
+            <View className="w-1 h-5 bg-blue-500 rounded-full mr-2" />
+            <Text className="text-gray-900 dark:text-white text-lg font-bold">
+              Recent Activity
             </Text>
+            <TouchableOpacity className="ml-auto">
+              <Text className="text-teal-600 dark:text-teal-400 text-sm font-medium">
+                View All
+              </Text>
+            </TouchableOpacity>
           </View>
-          <Text className="text-light-textSecondary dark:text-dark-textSecondary text-xs">
-            All systems operational • Last backup: Today at 2:00 AM • API running normally
-          </Text>
+          
+          <View className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm">
+            {dashboardData.recentActivity.slice(0, 3).map((activity, index) => (
+              <View key={index} className="flex-row items-center py-3 border-b border-gray-100 dark:border-gray-700 last:border-0">
+                <View className="bg-gray-100 dark:bg-gray-700 p-2 rounded-full">
+                  <Ionicons name="notifications-outline" size={16} color="#6B7280" />
+                </View>
+                <View className="flex-1 ml-3">
+                  <Text className="text-gray-800 dark:text-gray-200 text-sm font-medium">
+                    {activity.title}
+                  </Text>
+                  <Text className="text-gray-500 dark:text-gray-400 text-xs mt-0.5">
+                    {activity.time}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward-outline" size={16} color="#94A3B8" />
+              </View>
+            ))}
+          </View>
         </View>
-      </View>
+      )}
 
-      {/* Bottom Space */}
+      {/* Bottom Padding */}
       <View className="h-4" />
     </ScrollView>
   );
