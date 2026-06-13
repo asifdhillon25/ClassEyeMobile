@@ -392,7 +392,13 @@ export default function ManualAttendance() {
           
           {returnToReview && (
             <TouchableOpacity 
-              onPress={() => router.back()}
+              onPress={() => {
+                if (router.canGoBack()) {
+                  router.back();
+                } else {
+                  router.replace(`/attendance/${classId}/review`);
+                }
+              }}
               className="mt-3 py-2"
             >
               <Text className="text-light-textSecondary dark:text-dark-textSecondary text-xs text-center">

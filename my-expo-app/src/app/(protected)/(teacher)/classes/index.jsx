@@ -113,7 +113,7 @@ export default function Classes() {
               <TouchableOpacity
                 key={item._id}
                 onPress={() =>
-                  router.push(`/(protected)/(teacher)/classes/${item._id}`)
+                  router.push(`(protected)/attendance/${item._id}`)
                 }
                 activeOpacity={0.7}
                 className="bg-light-surface dark:bg-dark-surface rounded-xl shadow-card overflow-hidden"

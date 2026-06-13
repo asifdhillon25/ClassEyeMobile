@@ -16,12 +16,14 @@ export default function AttendanceLayout() {
           fontWeight: '600',
         },
         headerLeft: () => (
-          <TouchableOpacity 
-            onPress={() => router.back()}
-            style={{ marginLeft: 16 }}
-          >
-            <Ionicons name="arrow-back" size={24} color="white" />
-          </TouchableOpacity>
+          router.canGoBack() ? (
+            <TouchableOpacity 
+              onPress={() => router.back()}
+              style={{ marginLeft: 16 }}
+            >
+              <Ionicons name="arrow-back" size={24} color="white" />
+            </TouchableOpacity>
+          ) : null
         ),
       }}
     >
